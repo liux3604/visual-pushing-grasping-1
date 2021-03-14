@@ -20,14 +20,14 @@
                 "--num_obj",
                 "1",
                 "--grasp_only",
-                // Load Snapshots
-                // "--load_snapshot",
-                // "--snapshot_file",
-                // "/home/song/visual-pushing-grasping/logs/2021-02-19.02:35:25/models/snapshot-007000.reinforcement.pth", 
-                // Continue logging
-                // "--continue_logging",
-                // "--logging_directory",
-                // "/home/song/visual-pushing-grasping/logs/2021-02-05.20:24:50",
+                //Load Snapshots
+                "--load_snapshot",
+                "--snapshot_file",
+                "/home/song/visual_original/visual-pushing-grasping-1/logs/2021-03-14.04:41:20/models/snapshot-000500.reinforcement.pth", 
+                //Continue logging
+                "--continue_logging",
+                "--logging_directory",
+                "/home/song/visual_original/visual-pushing-grasping-1/logs/2021-03-14.04:41:20",
             ]
         }
     ]
