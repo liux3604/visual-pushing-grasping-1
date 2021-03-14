@@ -372,6 +372,8 @@ class Trainer(object):
 
         canvas = None
         num_rotations = predictions.shape[0]
+        max_val = np.max(predictions)
+        min_val = np.min(predictions)
         for canvas_row in range(int(num_rotations/4)):
             tmp_row_canvas = None
             for canvas_col in range(4):
@@ -379,7 +381,8 @@ class Trainer(object):
                 prediction_vis = predictions[rotate_idx,:,:].copy()
                 # prediction_vis[prediction_vis < 0] = 0 # assume probability
                 # prediction_vis[prediction_vis > 1] = 1 # assume probability
-                prediction_vis = np.clip(prediction_vis, 0, 1)
+                #prediction_vis = np.clip(prediction_vis, 0, 1)
+                prediction_vis = (prediction_vis-min_val)/(max_val-min_val) # Globally heatmap normalized.
                 prediction_vis.shape = (predictions.shape[1], predictions.shape[2])
                 prediction_vis = cv2.applyColorMap((prediction_vis*255).astype(np.uint8), cv2.COLORMAP_JET)
                 if rotate_idx == best_pix_ind[0]:

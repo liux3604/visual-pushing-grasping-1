@@ -118,8 +118,8 @@ def main(args):
                         nonlocal_variables['primitive_action'] = 'push' if np.random.randint(0,2) == 0 else 'grasp'
                     else:
                         print('Strategy: exploit (exploration probability: %f)' % (explore_prob))
-                trainer.is_exploit_log.append([0 if explore_actions else 1])
-                logger.write_to_log('is-exploit', trainer.is_exploit_log)
+
+                explore_actions = np.random.uniform() < explore_prob
 
                 # If heuristic bootstrapping is enabled: if change has not been detected more than 2 times, execute heuristic algorithm to detect grasps/pushes
                 # NOTE: typically not necessary and can reduce final performance.
@@ -145,6 +145,17 @@ def main(args):
                     elif nonlocal_variables['primitive_action'] == 'grasp':
                         nonlocal_variables['best_pix_ind'] = np.unravel_index(np.argmax(grasp_predictions), grasp_predictions.shape)
                         predicted_value = np.max(grasp_predictions)
+
+                    if explore_actions:
+                        best_pix_ind_0 = np.random.randint(low = 0, high = grasp_predictions.shape[0]) #[low, high)
+                        best_pix_ind_1 = np.random.randint(low = int(grasp_predictions.shape[1] * 0.1), high = int(grasp_predictions.shape[1] * 0.9))
+                        best_pix_ind_2 = np.random.randint(low = int(grasp_predictions.shape[2] * 0.1), high = int(grasp_predictions.shape[2] * 0.9))
+                        nonlocal_variables['best_pix_ind'] = (best_pix_ind_0, best_pix_ind_1, best_pix_ind_2)
+                        print('---Exploring to determine best_pix_ind (exploration probability: %f)---' % (explore_prob))
+
+                trainer.is_exploit_log.append([0 if explore_actions else 1])
+                logger.write_to_log('is-exploit', trainer.is_exploit_log)
+                    
                 trainer.use_heuristic_log.append([1 if use_heuristic else 0])
                 logger.write_to_log('use-heuristic', trainer.use_heuristic_log)
 
