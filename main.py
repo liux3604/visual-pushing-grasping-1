@@ -179,9 +179,9 @@ def main(args):
 
                 # Visualize executed primitive, and affordances
                 if save_visualizations:
-                    push_pred_vis = trainer.get_prediction_vis(push_predictions, color_heightmap, nonlocal_variables['best_pix_ind'])
-                    logger.save_visualizations(trainer.iteration, push_pred_vis, 'push')
-                    cv2.imwrite('visualization.push.png', push_pred_vis)
+                    # push_pred_vis = trainer.get_prediction_vis(push_predictions, color_heightmap, nonlocal_variables['best_pix_ind'])
+                    # logger.save_visualizations(trainer.iteration, push_pred_vis, 'push')
+                    # cv2.imwrite('visualization.push.png', push_pred_vis)
                     grasp_pred_vis = trainer.get_prediction_vis(grasp_predictions, color_heightmap, nonlocal_variables['best_pix_ind'])
                     logger.save_visualizations(trainer.iteration, grasp_pred_vis, 'grasp')
                     cv2.imwrite('visualization.grasp.png', grasp_pred_vis)
@@ -237,7 +237,7 @@ def main(args):
         empty_threshold = 300
         if is_sim and is_testing:
             empty_threshold = 10
-        if np.sum(stuff_count) < empty_threshold or (is_sim and no_change_count[0] + no_change_count[1] > 10):
+        if np.sum(stuff_count) < empty_threshold or (is_sim and no_change_count[0] + no_change_count[1] > 1):
             no_change_count = [0, 0]
             if is_sim:
                 print('Not enough objects in view (value: %d)! Repositioning objects.' % (np.sum(stuff_count)))
@@ -376,7 +376,7 @@ def main(args):
             # Save model snapshot
             if not is_testing:
                 logger.save_backup_model(trainer.model, method)
-                if trainer.iteration % 50 == 0:
+                if trainer.iteration % 500 == 0:
                     logger.save_model(trainer.iteration, trainer.model, method)
                     if trainer.use_cuda:
                         trainer.model = trainer.model.cuda()
