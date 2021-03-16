@@ -62,11 +62,11 @@ def main(args):
 
     # Set random seed
     np.random.seed(random_seed)
-
+    object_mass = 0.0
     # Initialize pick-and-place system (camera and robot)
     robot = Robot(is_sim, obj_mesh_dir, num_obj, workspace_limits,
                   tcp_host_ip, tcp_port, rtc_host_ip, rtc_port,
-                  is_testing, test_preset_cases, test_preset_file)
+                  is_testing, test_preset_cases, test_preset_file, object_mass)
 
     # Initialize trainer
     trainer = Trainer(method, push_rewards, future_reward_discount,
@@ -227,7 +227,10 @@ def main(args):
         iteration_time_0 = time.time()
 
         # Make sure simulation is still stable (if not, reset simulation)
-        if is_sim: robot.check_sim()
+        if is_sim and (not robot.check_sim()):
+            print('Simulation unstable. Restarting environment.')
+            robot.restart_sim()
+            robot.add_objects(object_mass)
 
         # Get latest RGB-D image
         color_img, depth_img = robot.get_camera_data()
@@ -251,9 +254,9 @@ def main(args):
         if np.sum(stuff_count) < empty_threshold or (is_sim and no_change_count[0] + no_change_count[1] > 1):
             no_change_count = [0, 0]
             if is_sim:
-                print('Not enough objects in view (value: %d)! Repositioning objects.' % (np.sum(stuff_count)))
+                print('Not enough objects in view or failed too many times. (value: %d)! Repositioning objects.' % (np.sum(stuff_count)))
                 robot.restart_sim()
-                robot.add_objects()
+                robot.add_objects(object_mass)
                 if is_testing: # If at end of test run, re-load original weights (before test run)
                     trainer.model.load_state_dict(torch.load(snapshot_file))
             else:
@@ -271,7 +274,7 @@ def main(args):
         if not exit_called:
 
             # Run forward pass with network to get affordances
-            push_predictions, grasp_predictions, state_feat = trainer.forward(color_heightmap, valid_depth_heightmap, is_volatile=True)
+            push_predictions, grasp_predictions, state_feat = trainer.forward(color_heightmap, valid_depth_heightmap, is_volatile=True, object_mass = object_mass)
 
             # Execute best primitive action on robot in another thread
             nonlocal_variables['executing_action'] = True
@@ -302,14 +305,16 @@ def main(args):
                     no_change_count[1] += 1
 
             # Compute training labels
-            label_value, prev_reward_value = trainer.get_label_value(prev_primitive_action, prev_push_success, prev_grasp_success, change_detected, prev_push_predictions, prev_grasp_predictions, color_heightmap, valid_depth_heightmap)
+            label_value, prev_reward_value = trainer.get_label_value(prev_primitive_action, prev_push_success, prev_grasp_success, change_detected, prev_push_predictions, prev_grasp_predictions, color_heightmap, valid_depth_heightmap, prev_object_mass)
             trainer.label_value_log.append([label_value])
             logger.write_to_log('label-value', trainer.label_value_log)
             trainer.reward_value_log.append([prev_reward_value])
             logger.write_to_log('reward-value', trainer.reward_value_log)
+            trainer.objectmass_log.append([prev_object_mass])
+            logger.write_to_log('objectmass', trainer.objectmass_log)
 
             # Backpropagate
-            trainer.backprop(prev_color_heightmap, prev_valid_depth_heightmap, prev_primitive_action, prev_best_pix_ind, label_value)
+            trainer.backprop(prev_color_heightmap, prev_valid_depth_heightmap, prev_primitive_action, prev_best_pix_ind, label_value, prev_object_mass)
 
             # Adjust exploration probability
             if not is_testing:
@@ -356,7 +361,7 @@ def main(args):
 
                     # Compute forward pass with sample
                     with torch.no_grad():
-                        sample_push_predictions, sample_grasp_predictions, sample_state_feat = trainer.forward(sample_color_heightmap, sample_depth_heightmap, is_volatile=True)
+                        sample_push_predictions, sample_grasp_predictions, sample_state_feat = trainer.forward(sample_color_heightmap, sample_depth_heightmap, is_volatile=True, object_mass=trainer.objectmass_log[sample_iteration][0])
 
                     # Load next sample RGB-D heightmap
                     next_sample_color_heightmap = cv2.imread(os.path.join(logger.color_heightmaps_directory, '%06d.0.color.png' % (sample_iteration+1)))
@@ -371,7 +376,7 @@ def main(args):
 
                     # Get labels for sample and backpropagate
                     sample_best_pix_ind = (np.asarray(trainer.executed_action_log)[sample_iteration,1:4]).astype(int)
-                    trainer.backprop(sample_color_heightmap, sample_depth_heightmap, sample_primitive_action, sample_best_pix_ind, trainer.label_value_log[sample_iteration])
+                    trainer.backprop(sample_color_heightmap, sample_depth_heightmap, sample_primitive_action, sample_best_pix_ind, trainer.label_value_log[sample_iteration], object_mass=trainer.objectmass_log[sample_iteration][0])
 
                     # Recompute prediction value and label for replay buffer
                     if sample_primitive_action == 'push':
@@ -411,6 +416,7 @@ def main(args):
         prev_push_predictions = push_predictions.copy()
         prev_grasp_predictions = grasp_predictions.copy()
         prev_best_pix_ind = nonlocal_variables['best_pix_ind']
+        prev_object_mass = object_mass
 
         trainer.iteration += 1
         iteration_time_1 = time.time()

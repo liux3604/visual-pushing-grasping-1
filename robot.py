@@ -10,7 +10,7 @@ from simulation import vrep
 class Robot(object):
     def __init__(self, is_sim, obj_mesh_dir, num_obj, workspace_limits,
                  tcp_host_ip, tcp_port, rtc_host_ip, rtc_port,
-                 is_testing, test_preset_cases, test_preset_file):
+                 is_testing, test_preset_cases, test_preset_file, initial_object_mass):
 
         self.is_sim = is_sim
         self.workspace_limits = workspace_limits
@@ -87,7 +87,7 @@ class Robot(object):
                 self.obj_mesh_color = np.asarray(self.test_obj_mesh_colors)
 
             # Add objects to simulation environment
-            self.add_objects()
+            self.add_objects(initial_object_mass)
 
 
         # If in real-settings...
@@ -156,7 +156,7 @@ class Robot(object):
         self.bg_depth_img = self.bg_depth_img * self.cam_depth_scale
 
 
-    def add_objects(self):
+    def add_objects(self, object_mass):
 
         # Add each object to robot workspace at x,y location and orientation (random or pre-loaded)
         self.object_handles = []
@@ -207,10 +207,7 @@ class Robot(object):
         # Check if simulation is stable by checking if gripper is within workspace
         sim_ret, gripper_position = vrep.simxGetObjectPosition(self.sim_client, self.RG2_tip_handle, -1, vrep.simx_opmode_blocking)
         sim_ok = gripper_position[0] > self.workspace_limits[0][0] - 0.1 and gripper_position[0] < self.workspace_limits[0][1] + 0.1 and gripper_position[1] > self.workspace_limits[1][0] - 0.1 and gripper_position[1] < self.workspace_limits[1][1] + 0.1 and gripper_position[2] > self.workspace_limits[2][0] and gripper_position[2] < self.workspace_limits[2][1]
-        if not sim_ok:
-            print('Simulation unstable. Restarting environment.')
-            self.restart_sim()
-            self.add_objects()
+        return sim_ok
 
 
     def get_task_score(self):

@@ -84,6 +84,7 @@ class Trainer(object):
         self.use_heuristic_log = []
         self.is_exploit_log = []
         self.clearance_log = []
+        self.objectmass_log = []
 
 
     # Pre-load execution info and RL variables
@@ -115,10 +116,16 @@ class Trainer(object):
         self.clearance_log = np.loadtxt(os.path.join(transitions_directory, 'clearance.log.txt'), delimiter=' ')
         self.clearance_log.shape = (self.clearance_log.shape[0],1)
         self.clearance_log = self.clearance_log.tolist()
+        self.objectmass_log = np.loadtxt(os.path.join(transitions_directory, 'objectmass.log.txt'), delimiter=' ')
+        self.objectmass_log = self.objectmass_log[0:self.iteration]
+        self.objectmass_log.shape = (self.iteration,1)
+        self.objectmass_log = self.objectmass_log.tolist()
+
+        assert (len(self.executed_action_log) == len(self.reward_value_log) == len(self.predicted_value_log) == len(self.objectmass_log))
 
 
     # Compute forward pass through model to compute affordances/Q
-    def forward(self, color_heightmap, depth_heightmap, is_volatile=False, specific_rotation=-1):
+    def forward(self, color_heightmap, depth_heightmap, object_mass, is_volatile=False, specific_rotation=-1):
 
         # Apply 2x scale to input heightmaps
         color_heightmap_2x = ndimage.zoom(color_heightmap, zoom=[2,2,1], order=0)
@@ -160,7 +167,7 @@ class Trainer(object):
         input_depth_data = torch.from_numpy(input_depth_image.astype(np.float32)).permute(3,2,0,1)
 
         # Pass input data through model
-        output_prob, state_feat = self.model.forward(input_color_data, input_depth_data, is_volatile, specific_rotation)
+        output_prob, state_feat = self.model.forward(input_color_data, input_depth_data, object_mass, is_volatile, specific_rotation)
 
         if self.method == 'reactive':
 
@@ -187,7 +194,7 @@ class Trainer(object):
         return push_predictions, grasp_predictions, state_feat
 
 
-    def get_label_value(self, primitive_action, push_success, grasp_success, change_detected, prev_push_predictions, prev_grasp_predictions, next_color_heightmap, next_depth_heightmap):
+    def get_label_value(self, primitive_action, push_success, grasp_success, change_detected, prev_push_predictions, prev_grasp_predictions, next_color_heightmap, next_depth_heightmap, object_mass):
 
         if self.method == 'reactive':
 
@@ -218,7 +225,7 @@ class Trainer(object):
             if not change_detected and not grasp_success:
                 future_reward = 0
             else:
-                next_push_predictions, next_grasp_predictions, next_state_feat = self.forward(next_color_heightmap, next_depth_heightmap, is_volatile=True)
+                next_push_predictions, next_grasp_predictions, next_state_feat = self.forward(next_color_heightmap, next_depth_heightmap, is_volatile=True, object_mass=object_mass)
                 future_reward = max(np.max(next_push_predictions), np.max(next_grasp_predictions))
 
                 # # Experiment: use Q differences
@@ -238,7 +245,7 @@ class Trainer(object):
 
 
     # Compute labels and backpropagate
-    def backprop(self, color_heightmap, depth_heightmap, primitive_action, best_pix_ind, label_value):
+    def backprop(self, color_heightmap, depth_heightmap, primitive_action, best_pix_ind, label_value, object_mass):
 
         if self.method == 'reactive':
 
@@ -326,7 +333,7 @@ class Trainer(object):
             if primitive_action == 'push':
 
                 # Do forward pass with specified rotation (to save gradients)
-                push_predictions, grasp_predictions, state_feat = self.forward(color_heightmap, depth_heightmap, is_volatile=False, specific_rotation=best_pix_ind[0])
+                push_predictions, grasp_predictions, state_feat = self.forward(color_heightmap, depth_heightmap, is_volatile=False, specific_rotation=best_pix_ind[0], object_mass=object_mass)
 
                 if self.use_cuda:
                     loss = self.criterion(self.model.output_prob[0][0].view(1,320,320), Variable(torch.from_numpy(label).float().cuda())) * Variable(torch.from_numpy(label_weights).float().cuda(),requires_grad=False)
@@ -339,7 +346,7 @@ class Trainer(object):
             elif primitive_action == 'grasp':
 
                 # Do forward pass with specified rotation (to save gradients)
-                push_predictions, grasp_predictions, state_feat = self.forward(color_heightmap, depth_heightmap, is_volatile=False, specific_rotation=best_pix_ind[0])
+                push_predictions, grasp_predictions, state_feat = self.forward(color_heightmap, depth_heightmap, is_volatile=False, specific_rotation=best_pix_ind[0], object_mass=object_mass)
 
                 if self.use_cuda:
                     loss = self.criterion(self.model.output_prob[0][1].view(1,320,320), Variable(torch.from_numpy(label).float().cuda())) * Variable(torch.from_numpy(label_weights).float().cuda(),requires_grad=False)
@@ -351,7 +358,7 @@ class Trainer(object):
 
                 opposite_rotate_idx = (best_pix_ind[0] + self.model.num_rotations/2) % self.model.num_rotations
 
-                push_predictions, grasp_predictions, state_feat = self.forward(color_heightmap, depth_heightmap, is_volatile=False, specific_rotation=opposite_rotate_idx)
+                push_predictions, grasp_predictions, state_feat = self.forward(color_heightmap, depth_heightmap, is_volatile=False, specific_rotation=opposite_rotate_idx, object_mass=object_mass)
 
                 if self.use_cuda:
                     loss = self.criterion(self.model.output_prob[0][1].view(1,320,320), Variable(torch.from_numpy(label).float().cuda())) * Variable(torch.from_numpy(label_weights).float().cuda(),requires_grad=False)
