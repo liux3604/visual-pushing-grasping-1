@@ -62,7 +62,7 @@ def main(args):
 
     # Set random seed
     np.random.seed(random_seed)
-    object_mass = 0.0
+    object_mass = 2.0
     # Initialize pick-and-place system (camera and robot)
     robot = Robot(is_sim, obj_mesh_dir, num_obj, workspace_limits,
                   tcp_host_ip, tcp_port, rtc_host_ip, rtc_port,

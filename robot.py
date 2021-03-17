@@ -174,14 +174,25 @@ class Robot(object):
                 object_position = [self.test_obj_positions[object_idx][0], self.test_obj_positions[object_idx][1], self.test_obj_positions[object_idx][2]]
                 object_orientation = [self.test_obj_orientations[object_idx][0], self.test_obj_orientations[object_idx][1], self.test_obj_orientations[object_idx][2]]
             object_color = [self.obj_mesh_color[object_idx][0], self.obj_mesh_color[object_idx][1], self.obj_mesh_color[object_idx][2]]
-            ret_resp,ret_ints,ret_floats,ret_strings,ret_buffer = vrep.simxCallScriptFunction(self.sim_client, 'remoteApiCommandServer',vrep.sim_scripttype_childscript,'importShape',[0,0,255,0], object_position + object_orientation + object_color, [curr_mesh_file, curr_shape_name], bytearray(), vrep.simx_opmode_blocking)
+            
+            ret_resp, curr_shape_handle = vrep.simxLoadModel(self.sim_client, curr_mesh_file, 1, vrep.simx_opmode_blocking)
+            
             if ret_resp == 8:
                 print('Failed to add new objects to simulation. Please restart.')
                 exit()
-            curr_shape_handle = ret_ints[0]
+
+            returnCode = vrep.simxSetObjectFloatParameter(self.sim_client, curr_shape_handle, vrep.sim_shapefloatparam_mass, # shapefloatparam_mass
+                                                          object_mass,
+                                                          vrep.simx_opmode_blocking)
+            if returnCode == vrep.simx_return_ok:
+                print('---New Mass:%f)---' % (object_mass))
+            
+            _ = vrep.simxSetObjectPosition(self.sim_client, curr_shape_handle, -1, object_position, vrep.simx_opmode_blocking)
+            _ = vrep.simxSetObjectOrientation(self.sim_client, curr_shape_handle, -1, object_orientation, vrep.simx_opmode_blocking)
+
             self.object_handles.append(curr_shape_handle)
             if not (self.is_testing and self.test_preset_cases):
-                time.sleep(2)
+                time.sleep(0.5)
         self.prev_obj_positions = []
         self.obj_positions = []
 
