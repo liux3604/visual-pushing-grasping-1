@@ -613,7 +613,7 @@ class Robot(object):
             position[2] = max(position[2] - 0.04, workspace_limits[2][0] + 0.02)
 
             # Move gripper to location above grasp target
-            grasp_location_margin = 0.15
+            grasp_location_margin = 0.30
             # sim_ret, UR5_target_handle = vrep.simxGetObjectHandle(self.sim_client,'UR5_target',vrep.simx_opmode_blocking)
             location_above_grasp_target = (position[0], position[1], position[2] + grasp_location_margin)
 

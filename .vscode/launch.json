@@ -20,11 +20,12 @@
                 "--num_obj",
                 "1",
                 "--grasp_only",
-                // //Load Snapshots
+                //Load Snapshots
                 // "--load_snapshot",
                 // "--snapshot_file",
-                // "/home/song/visual_original/visual-pushing-grasping-1/logs/2021-03-15.03:28:56/models/snapshot-backup.reinforcement.pth", 
-                // //Continue logging
+                // //"/home/song/visual_original/visual-pushing-grasping-1/logs/2021-03-15.03:28:56/models/snapshot-backup.reinforcement.pth", 
+                // "/home/song/visual_original/visual-pushing-grasping-1/downloads/snapshot-004500.reinforcement.pth",
+                //Continue logging
                 // "--continue_logging",
                 // "--logging_directory",
                 // "/home/song/visual_original/visual-pushing-grasping-1/logs/2021-03-15.03:28:56",
