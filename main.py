@@ -102,9 +102,9 @@ def main(args):
             if nonlocal_variables['executing_action']:
 
                 # Determine whether grasping or pushing should be executed based on network predictions
-                best_push_conf = np.max(push_predictions)
+                # best_push_conf = np.max(push_predictions)
                 best_grasp_conf = np.max(grasp_predictions)
-                print('Primitive confidence scores: %f (push), %f (grasp)' % (best_push_conf, best_grasp_conf))
+                # print('Primitive confidence scores: %f (push), %f (grasp)' % (best_push_conf, best_grasp_conf))
                 nonlocal_variables['primitive_action'] = 'grasp'
                 explore_actions = False
                 if not grasp_only:

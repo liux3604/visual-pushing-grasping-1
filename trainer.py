@@ -7,7 +7,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 from utils import CrossEntropyLoss2d
-from models import reactive_net, reinforcement_net
+from models import reactive_net, reinforcement_net, reinforcement_net_split
 from scipy import ndimage
 import matplotlib.pyplot as plt
 
@@ -51,7 +51,8 @@ class Trainer(object):
 
         # Fully convolutional Q network for deep reinforcement learning
         elif self.method == 'reinforcement':
-            self.model = reinforcement_net(self.use_cuda)
+            # self.model = reinforcement_net(self.use_cuda)
+            self.model = reinforcement_net_split(self.use_cuda)
             self.push_rewards = push_rewards
             self.future_reward_discount = future_reward_discount
 
