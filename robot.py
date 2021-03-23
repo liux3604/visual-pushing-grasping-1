@@ -613,7 +613,7 @@ class Robot(object):
             position[2] = max(position[2] - 0.04, workspace_limits[2][0] + 0.02)
 
             # Move gripper to location above grasp target
-            grasp_location_margin = 0.30
+            grasp_location_margin = 0.25
             # sim_ret, UR5_target_handle = vrep.simxGetObjectHandle(self.sim_client,'UR5_target',vrep.simx_opmode_blocking)
             location_above_grasp_target = (position[0], position[1], position[2] + grasp_location_margin)
 
@@ -663,6 +663,13 @@ class Robot(object):
             # Check if grasp is successful
             gripper_full_closed = self.close_gripper()
             grasp_success = not gripper_full_closed
+
+            # stability test
+            if grasp_success:
+                self.shake(distance = 0.05, time_interval=0.8)
+                self.close_gripper()
+                gripper_full_closed = self.close_gripper()
+                grasp_success = not gripper_full_closed
 
             # Move the grasped object elsewhere
             if grasp_success:
@@ -786,6 +793,33 @@ class Robot(object):
 
         return grasp_success
 
+    def shake(self, distance, time_interval):
+        sim_ret, UR5_target_position = vrep.simxGetObjectPosition(self.sim_client, self.UR5_target_handle, -1, vrep.simx_opmode_blocking)
+
+        _, current_angle = vrep.simxGetObjectOrientation(self.sim_client, self.UR5_target_handle, -1, vrep.simx_opmode_blocking)
+
+        shake_to_pos_xy = (UR5_target_position[0] + distance*np.cos(current_angle[1]), UR5_target_position[1] - distance*np.sin(current_angle[1]), UR5_target_position[2])
+
+        self.move_to_in_time(tool_position = shake_to_pos_xy, time_interval = time_interval)
+        time.sleep(0.2)
+        self.move_to_in_time(tool_position = UR5_target_position, time_interval = time_interval)
+        time.sleep(0.2)
+
+    def move_to_in_time(self, tool_position, time_interval):
+        # Each move_to action takes 2.5 seconds. 1/speed_factor*0.05s = time_interval. 0.05s is the default time step dt in simulator.
+        speed_factor = 0.05/time_interval
+        sim_ret, UR5_target_position = vrep.simxGetObjectPosition(self.sim_client, self.UR5_target_handle, -1, vrep.simx_opmode_blocking)
+
+        move_direction = np.asarray([tool_position[0] - UR5_target_position[0], tool_position[1] - UR5_target_position[1], tool_position[2] - UR5_target_position[2]])
+        move_magnitude = np.linalg.norm(move_direction)
+        move_step = speed_factor*move_direction/move_magnitude
+        num_move_steps = int(np.floor(move_magnitude/speed_factor))
+
+        for step_iter in range(num_move_steps):
+            vrep.simxSetObjectPosition(self.sim_client, self.UR5_target_handle, -1, (UR5_target_position[0] + move_step[0], UR5_target_position[1] + move_step[1], UR5_target_position[2] + move_step[2]), vrep.simx_opmode_blocking)
+            sim_ret, UR5_target_position = vrep.simxGetObjectPosition(self.sim_client, self.UR5_target_handle, -1, vrep.simx_opmode_blocking)
+
+        vrep.simxSetObjectPosition(self.sim_client, self.UR5_target_handle, -1, (tool_position[0], tool_position[1], tool_position[2]), vrep.simx_opmode_blocking)
 
     def push(self, position, heightmap_rotation_angle, workspace_limits):
         print('Executing: push at (%f, %f, %f)' % (position[0], position[1], position[2]))

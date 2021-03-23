@@ -62,7 +62,9 @@ def main(args):
 
     # Set random seed
     np.random.seed(random_seed)
-    object_mass = 2.0
+    mass_max = 4.0
+    mass_steps = 10
+    object_mass = mass_max/mass_steps * int(np.random.uniform(low=0, high=mass_steps)) #[0, 10)
     # Initialize pick-and-place system (camera and robot)
     robot = Robot(is_sim, obj_mesh_dir, num_obj, workspace_limits,
                   tcp_host_ip, tcp_port, rtc_host_ip, rtc_port,
@@ -230,6 +232,7 @@ def main(args):
         if is_sim and (not robot.check_sim()):
             print('Simulation unstable. Restarting environment.')
             robot.restart_sim()
+            object_mass = mass_max/mass_steps * int(np.random.uniform(low=0, high=mass_steps)) #[0, 10)
             robot.add_objects(object_mass)
 
         # Get latest RGB-D image
@@ -256,6 +259,7 @@ def main(args):
             if is_sim:
                 print('Not enough objects in view or failed too many times. (value: %d)! Repositioning objects.' % (np.sum(stuff_count)))
                 robot.restart_sim()
+                object_mass = mass_max/mass_steps * int(np.random.uniform(low=0, high=mass_steps)) #[0, 10)
                 robot.add_objects(object_mass)
                 if is_testing: # If at end of test run, re-load original weights (before test run)
                     trainer.model.load_state_dict(torch.load(snapshot_file))
