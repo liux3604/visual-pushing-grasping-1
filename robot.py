@@ -665,11 +665,11 @@ class Robot(object):
             grasp_success = not gripper_full_closed
 
             # stability test
-            if grasp_success:
-                self.shake(distance = 0.05, time_interval=0.8)
-                self.close_gripper()
-                gripper_full_closed = self.close_gripper()
-                grasp_success = not gripper_full_closed
+            # if grasp_success:
+            #     self.shake(distance = 0.05, time_interval=0.8)
+            #     self.close_gripper()
+            #     gripper_full_closed = self.close_gripper()
+            #     grasp_success = not gripper_full_closed
 
             # Move the grasped object elsewhere
             if grasp_success:
