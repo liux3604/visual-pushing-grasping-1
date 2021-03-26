@@ -7,7 +7,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 from utils import CrossEntropyLoss2d
-from models import reactive_net, reinforcement_net, reinforcement_net_split
+from models import reactive_net, reinforcement_net, reinforcement_net_split, reinforcement_net_choi
 from scipy import ndimage
 import matplotlib.pyplot as plt
 
@@ -52,7 +52,7 @@ class Trainer(object):
         # Fully convolutional Q network for deep reinforcement learning
         elif self.method == 'reinforcement':
             # self.model = reinforcement_net(self.use_cuda)
-            self.model = reinforcement_net_split(self.use_cuda)
+            self.model = reinforcement_net_choi(self.use_cuda)
             self.push_rewards = push_rewards
             self.future_reward_discount = future_reward_discount
 
@@ -167,8 +167,13 @@ class Trainer(object):
         input_color_data = torch.from_numpy(input_color_image.astype(np.float32)).permute(3,2,0,1)
         input_depth_data = torch.from_numpy(input_depth_image.astype(np.float32)).permute(3,2,0,1)
 
+        # mass layer
+        input_mass_data_zero = torch.zeros(input_depth_data.shape, dtype=torch.float32)
+        input_mass_data_values = torch.full(input_depth_data.shape, object_mass/4.0, dtype=torch.float32)
+        input_mass_data = torch.where(input_depth_data > 0.0, input_mass_data_values, input_mass_data_zero) # 0.0 is hardcoded. basically means any position that is higher than 0.01
+
         # Pass input data through model
-        output_prob, state_feat = self.model.forward(input_color_data, input_depth_data, object_mass, is_volatile, specific_rotation)
+        output_prob, state_feat = self.model.forward(input_color_data, input_depth_data, input_mass_data, is_volatile, specific_rotation)
 
         if self.method == 'reactive':
 
