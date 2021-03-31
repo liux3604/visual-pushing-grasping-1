@@ -12,6 +12,20 @@ from scipy import ndimage
 import matplotlib.pyplot as plt
 
 
+# 4d tensor array save as 3d image with name for debugging,
+def debugSave3DImage(image_inputs, name):
+    image_3d = np.empty([image_inputs.shape[2], image_inputs.shape[3], 3], dtype=np.float32)
+    image_inputs = image_inputs.numpy()
+    for i in range(3):
+        image_3d[:, :, i] = image_inputs[0, i, :, :]
+
+    image_3d[image_3d>0.0]  = 255
+    image_3d[image_3d==0.0] = 0
+    image_3d[image_3d<0.0]  = 0.0
+    
+    cv2.imwrite('groundtruth.%s.png'%(name), image_3d)
+    return
+
 class Trainer(object):
     def __init__(self, method, push_rewards, future_reward_discount,
                  is_testing, load_snapshot, snapshot_file, force_cpu):
@@ -171,6 +185,9 @@ class Trainer(object):
         input_mass_data_zero = torch.zeros(input_depth_data.shape, dtype=torch.float32)
         input_mass_data_values = torch.full(input_depth_data.shape, object_mass/4.0, dtype=torch.float32)
         input_mass_data = torch.where(input_depth_data > 0.0, input_mass_data_values, input_mass_data_zero) # 0.0 is hardcoded. basically means any position that is higher than 0.01
+
+        debugSave3DImage(input_mass_data, "testmasslayer")
+        debugSave3DImage(input_depth_data, "input_depth_data")
 
         # Pass input data through model
         output_prob, state_feat = self.model.forward(input_color_data, input_depth_data, input_mass_data, is_volatile, specific_rotation)
