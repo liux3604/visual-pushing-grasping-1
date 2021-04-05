@@ -85,10 +85,11 @@ class Trainer(object):
             self.model = self.model.cuda()
 
         # Set model to training mode
+        
         self.model.train()
 
         # Initialize optimizer
-        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=1e-4, momentum=0.9, weight_decay=2e-5)
+        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=1e-4/200.0, momentum=0.9, weight_decay=2e-5) #lr=1e-4
         self.iteration = 0
 
         # Initialize lists to save execution info and RL variables
@@ -186,8 +187,8 @@ class Trainer(object):
         input_mass_data_values = torch.full(input_depth_data.shape, object_mass/4.0, dtype=torch.float32)
         input_mass_data = torch.where(input_depth_data > 0.0, input_mass_data_values, input_mass_data_zero) # 0.0 is hardcoded. basically means any position that is higher than 0.01
 
-        debugSave3DImage(input_mass_data, "testmasslayer")
-        debugSave3DImage(input_depth_data, "input_depth_data")
+        #debugSave3DImage(input_mass_data, "testmasslayer")
+        #debugSave3DImage(input_depth_data, "input_depth_data")
 
         # Pass input data through model
         output_prob, state_feat = self.model.forward(input_color_data, input_depth_data, input_mass_data, is_volatile, specific_rotation)
@@ -397,6 +398,66 @@ class Trainer(object):
             print('Training loss: %f' % (loss_value))
             self.optimizer.step()
 
+    def backprop_batch(self, logger, trainer, random_batch_failure, random_batch_success):
+        iterations_collection = np.concatenate((random_batch_failure, random_batch_success))
+        # Compute loss and backward pass
+        self.optimizer.zero_grad()
+        loss_value = 0
+
+        for sample_iteration in iterations_collection:
+            # Load sample RGB-D heightmap
+            color_heightmap = cv2.imread(os.path.join(logger.color_heightmaps_directory, '%06d.0.color.png' % (sample_iteration)))
+            color_heightmap = cv2.cvtColor(color_heightmap, cv2.COLOR_BGR2RGB)
+            depth_heightmap = cv2.imread(os.path.join(logger.depth_heightmaps_directory, '%06d.0.depth.png' % (sample_iteration)), -1)
+            depth_heightmap = depth_heightmap.astype(np.float32)/100000
+
+            best_pix_ind = (np.asarray(trainer.executed_action_log)[sample_iteration,1:4]).astype(int)
+            label_value = trainer.label_value_log[sample_iteration]
+            object_mass = trainer.objectmass_log[sample_iteration][0]
+
+            # Compute labels
+            label = np.zeros((1,320,320))
+            action_area = np.zeros((224,224))
+            action_area[best_pix_ind[1]][best_pix_ind[2]] = 1
+            # blur_kernel = np.ones((5,5),np.float32)/25
+            # action_area = cv2.filter2D(action_area, -1, blur_kernel)
+            tmp_label = np.zeros((224,224))
+            tmp_label[action_area > 0] = label_value
+            label[0,48:(320-48),48:(320-48)] = tmp_label
+
+            # Compute label mask
+            label_weights = np.zeros(label.shape)
+            tmp_label_weights = np.zeros((224,224))
+            tmp_label_weights[action_area > 0] = 1
+            label_weights[0,48:(320-48),48:(320-48)] = tmp_label_weights
+
+            # Do forward pass with specified rotation (to save gradients)
+            push_predictions, grasp_predictions, state_feat = self.forward(color_heightmap, depth_heightmap, is_volatile=False, specific_rotation=best_pix_ind[0], object_mass=object_mass)
+
+            if self.use_cuda:
+                loss = self.criterion(self.model.output_prob[0][1].view(1,320,320), Variable(torch.from_numpy(label).float().cuda())) * Variable(torch.from_numpy(label_weights).float().cuda(),requires_grad=False)
+            else:
+                loss = self.criterion(self.model.output_prob[0][1].view(1,320,320), Variable(torch.from_numpy(label).float())) * Variable(torch.from_numpy(label_weights).float(),requires_grad=False)
+            loss = loss.sum()
+            loss.backward()
+            loss_value = loss.cpu().data.numpy()
+
+            opposite_rotate_idx = (best_pix_ind[0] + self.model.num_rotations/2) % self.model.num_rotations
+
+            push_predictions, grasp_predictions, state_feat = self.forward(color_heightmap, depth_heightmap, is_volatile=False, specific_rotation=opposite_rotate_idx, object_mass=object_mass)
+
+            if self.use_cuda:
+                loss = self.criterion(self.model.output_prob[0][1].view(1,320,320), Variable(torch.from_numpy(label).float().cuda())) * Variable(torch.from_numpy(label_weights).float().cuda(),requires_grad=False)
+            else:
+                loss = self.criterion(self.model.output_prob[0][1].view(1,320,320), Variable(torch.from_numpy(label).float())) * Variable(torch.from_numpy(label_weights).float(),requires_grad=False)
+
+            loss = loss.sum()
+            loss.backward()
+            loss_value = loss.cpu().data.numpy()
+
+        loss_value = loss_value/iterations_collection.size
+        print('Training loss: %f' % (loss_value))
+        self.optimizer.step()
 
     def get_prediction_vis(self, predictions, color_heightmap, best_pix_ind):
 

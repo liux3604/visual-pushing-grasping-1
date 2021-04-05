@@ -1,6 +1,6 @@
 catkin_ws/build
 catkin_ws/devel
-
+temp_results/*
 backup/*
 logs/*
 downloads/server
