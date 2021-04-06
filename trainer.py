@@ -187,8 +187,9 @@ class Trainer(object):
         input_mass_data_values = torch.full(input_depth_data.shape, object_mass/4.0, dtype=torch.float32)
         input_mass_data = torch.where(input_depth_data > 0.0, input_mass_data_values, input_mass_data_zero) # 0.0 is hardcoded. basically means any position that is higher than 0.01
 
-        #debugSave3DImage(input_mass_data, "testmasslayer")
-        #debugSave3DImage(input_depth_data, "input_depth_data")
+        # debugSave3DImage(input_mass_data, "testmasslayer")
+        # debugSave3DImage(input_depth_data, "input_depth_data")
+        time.sleep(1)
 
         # Pass input data through model
         output_prob, state_feat = self.model.forward(input_color_data, input_depth_data, input_mass_data, is_volatile, specific_rotation)
@@ -455,7 +456,7 @@ class Trainer(object):
             loss.backward()
             loss_value = loss.cpu().data.numpy()
 
-        loss_value = loss_value/iterations_collection.size
+        loss_value = loss_value
         print('Training loss: %f' % (loss_value))
         self.optimizer.step()
 

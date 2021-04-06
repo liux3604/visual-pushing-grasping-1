@@ -64,7 +64,8 @@ def main(args):
     np.random.seed(random_seed)
     mass_max = 4.0
     mass_steps = 10
-    object_mass = mass_max/mass_steps * int(np.random.uniform(low=0, high=mass_steps)) #[0, 10)
+    object_mass = mass_max/mass_steps * np.random.randint(low = 1, high = (mass_steps + 1)) #{0.4, 0.8, ..., 4.0}
+
     # Initialize pick-and-place system (camera and robot)
     robot = Robot(is_sim, obj_mesh_dir, num_obj, workspace_limits,
                   tcp_host_ip, tcp_port, rtc_host_ip, rtc_port,
@@ -232,7 +233,7 @@ def main(args):
         if is_sim and (not robot.check_sim()):
             print('Simulation unstable. Restarting environment.')
             robot.restart_sim()
-            object_mass = mass_max/mass_steps * int(np.random.uniform(low=0, high=mass_steps)) #[0, 10)
+            object_mass = mass_max/mass_steps * np.random.randint(low = 1, high = (mass_steps + 1)) #{0.4, 0.8, ..., 4.0}
             robot.add_objects(object_mass)
 
         # Get latest RGB-D image
@@ -259,7 +260,7 @@ def main(args):
             if is_sim:
                 print('Not enough objects in view or failed too many times. (value: %d)! Repositioning objects.' % (np.sum(stuff_count)))
                 robot.restart_sim()
-                object_mass = mass_max/mass_steps * int(np.random.uniform(low=0, high=mass_steps)) #[0, 10)
+                object_mass = mass_max/mass_steps * np.random.randint(low = 1, high = (mass_steps + 1)) #{0.4, 0.8, ..., 4.0}
                 robot.add_objects(object_mass)
                 if is_testing: # If at end of test run, re-load original weights (before test run)
                     trainer.model.load_state_dict(torch.load(snapshot_file))
@@ -322,7 +323,8 @@ def main(args):
 
             # Adjust exploration probability
             if not is_testing:
-                explore_prob = max(0.85 * np.power(0.99998, trainer.iteration), 0.5) if explore_rate_decay else 0.5
+                # explore_prob = max(0.85 * np.power(0.99998, trainer.iteration), 0.5) if explore_rate_decay else 0.5
+                explore_prob = max(0.5 * np.power(0.9998, trainer.iteration), 0.1)
 
             # Do sampling for experience replay
             if experience_replay and not is_testing:
