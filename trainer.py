@@ -189,7 +189,7 @@ class Trainer(object):
 
         # debugSave3DImage(input_mass_data, "testmasslayer")
         # debugSave3DImage(input_depth_data, "input_depth_data")
-        time.sleep(1)
+        # time.sleep(1)
 
         # Pass input data through model
         output_prob, state_feat = self.model.forward(input_color_data, input_depth_data, input_mass_data, is_volatile, specific_rotation)
