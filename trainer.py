@@ -89,7 +89,7 @@ class Trainer(object):
         self.model.train()
 
         # Initialize optimizer
-        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=1e-4/200.0, momentum=0.9, weight_decay=2e-5) #lr=1e-4
+        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=1e-4, momentum=0.9, weight_decay=2e-5) #lr=1e-4
         self.iteration = 0
 
         # Initialize lists to save execution info and RL variables
