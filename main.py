@@ -62,7 +62,7 @@ def main(args):
 
     # Set random seed
     np.random.seed(random_seed)
-    mass_max = 4.0
+    mass_max = 5.0
     mass_steps = 10
     object_mass = mass_max/mass_steps * np.random.randint(low = 1, high = (mass_steps + 1)) #{0.4, 0.8, ..., 4.0}
 
