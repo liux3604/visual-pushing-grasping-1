@@ -455,7 +455,7 @@ class Trainer(object):
             loss = loss.sum()/iterations_collection.size # normalize by the batch size so that leanring rate doesn't need to be scaled down accordingly.
             loss.backward()
             loss_value = loss_value + loss.cpu().data.numpy()
-        # print('mean weight: %f' % (torch.mean(self.model.graspnet[2].weight.grad).data)) # for debugging
+            # print('mean weight: %f' % (torch.mean(self.model.graspnet[2].weight.grad).data)) # for debugging, we could observe that it increase over time.
 
         loss_value = loss_value
         print('Training loss: %f' % (loss_value))
