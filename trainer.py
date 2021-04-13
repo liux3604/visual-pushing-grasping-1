@@ -184,7 +184,7 @@ class Trainer(object):
 
         # mass layer
         input_mass_data_zero = torch.zeros(input_depth_data.shape, dtype=torch.float32)
-        input_mass_data_values = torch.full(input_depth_data.shape, object_mass/4.0, dtype=torch.float32)
+        input_mass_data_values = torch.full(input_depth_data.shape, 1.0, dtype=torch.float32)
         input_mass_data = torch.where(input_depth_data > 0.0, input_mass_data_values, input_mass_data_zero) # 0.0 is hardcoded. basically means any position that is higher than 0.01
 
         # debugSave3DImage(input_mass_data, "testmasslayer")
