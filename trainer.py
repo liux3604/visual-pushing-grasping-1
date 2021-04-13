@@ -184,7 +184,7 @@ class Trainer(object):
 
         # mass layer
         input_mass_data_zero = torch.zeros(input_depth_data.shape, dtype=torch.float32)
-        input_mass_data_values = torch.full(input_depth_data.shape, 1.0, dtype=torch.float32)
+        input_mass_data_values = torch.full(input_depth_data.shape, 1.0*object_mass/5.0, dtype=torch.float32)
         input_mass_data = torch.where(input_depth_data > 0.0, input_mass_data_values, input_mass_data_zero) # 0.0 is hardcoded. basically means any position that is higher than 0.01
 
         # debugSave3DImage(input_mass_data, "testmasslayer")
@@ -403,8 +403,7 @@ class Trainer(object):
         iterations_collection = np.concatenate((random_batch_failure, random_batch_success))
         # Compute loss and backward pass
         self.optimizer.zero_grad()
-        loss_value = 0
-
+        loss_value = 0.0
         for sample_iteration in iterations_collection:
             # Load sample RGB-D heightmap
             color_heightmap = cv2.imread(os.path.join(logger.color_heightmaps_directory, '%06d.0.color.png' % (sample_iteration)))
@@ -439,9 +438,10 @@ class Trainer(object):
                 loss = self.criterion(self.model.output_prob[0][1].view(1,320,320), Variable(torch.from_numpy(label).float().cuda())) * Variable(torch.from_numpy(label_weights).float().cuda(),requires_grad=False)
             else:
                 loss = self.criterion(self.model.output_prob[0][1].view(1,320,320), Variable(torch.from_numpy(label).float())) * Variable(torch.from_numpy(label_weights).float(),requires_grad=False)
-            loss = loss.sum()
+
+            loss = loss.sum()/iterations_collection.size # normalize by the batch size so that leanring rate doesn't need to be scaled down accordingly.
             loss.backward()
-            loss_value = loss.cpu().data.numpy()
+            loss_value = loss_value + loss.cpu().data.numpy()
 
             opposite_rotate_idx = (best_pix_ind[0] + self.model.num_rotations/2) % self.model.num_rotations
 
@@ -452,9 +452,10 @@ class Trainer(object):
             else:
                 loss = self.criterion(self.model.output_prob[0][1].view(1,320,320), Variable(torch.from_numpy(label).float())) * Variable(torch.from_numpy(label_weights).float(),requires_grad=False)
 
-            loss = loss.sum()
+            loss = loss.sum()/iterations_collection.size # normalize by the batch size so that leanring rate doesn't need to be scaled down accordingly.
             loss.backward()
-            loss_value = loss.cpu().data.numpy()
+            loss_value = loss_value + loss.cpu().data.numpy()
+        # print('mean weight: %f' % (torch.mean(self.model.graspnet[2].weight.grad).data)) # for debugging
 
         loss_value = loss_value
         print('Training loss: %f' % (loss_value))

@@ -63,7 +63,7 @@ def main(args):
         iteration_time_0 = time.time()
 
         # Do sampling for experience replay
-        batch_size = 100
+        batch_size = 200
         random_batch_failure = np.random.choice(sample_ind_failure, batch_size, replace=False)
         random_batch_success = np.random.choice(sample_ind_success, batch_size, replace=False)
         trainer.backprop_batch(logger, trainer, random_batch_failure, random_batch_success)
